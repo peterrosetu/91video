@@ -13,6 +13,8 @@ const reDir = Conf.exp.reDir;
 const logFile = 'rename.log';
 const errFile = 'rename.err';
 
+// execute, where Thunder downloaded a batch.
+
 co(function* () {
     yield DB.use('caobi45');
     Comm.mkDirs(reDir);
@@ -21,6 +23,11 @@ co(function* () {
     for (let i = 0; i < videos.length; i++) {
         const file = videos[i];
         const src = path.join(dlDir, file);
+        if (fs.statSync(src).size < 20480) {
+            errLog(`Warning invalid file! name=${file}`);
+            fs.unlinkSync(src);
+            continue;
+        }
         const data = yield DB.Model.findAll({
             where: {
                 mp4: {[Op.endsWith]: file},
@@ -36,7 +43,10 @@ co(function* () {
                     errLog(`\t${x.id} ${x.title}`);
                 });
             }
-            const name = data[0].title.trim();
+            let name = data[0].title.trim();
+            if (name.indexOf('http:/') !== -1) {
+                name = name.split('http:/')[0] + Date.now().toString();
+            }
             const newName = Comm.newName(data[0].id, name);
             const dst = path.join(reDir, newName);
             if (fs.existsSync(dst)) {

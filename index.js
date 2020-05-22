@@ -12,6 +12,7 @@ app.set('views', path.join(__dirname, 'www'));
 app.set('view engine', 'ejs');
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
+app.use(express.static(path.join(__dirname, 'static')));
 
 app.get('/', (req, res, next) => {
     co(function* () {
@@ -20,8 +21,7 @@ app.get('/', (req, res, next) => {
             const data = yield DB.Model.findOne({where: {id: id}});
             if (Conf.www.mode === 'offline') {
                 const flag = yield Comm.openVideo(Conf.exp, data);
-                const msg = flag ? 'Play success.' : 'Play failure.';
-                res.end(`<h1>${msg}</h1>`);
+                res.end(flag ? 'Play failure.' : '<script>window.close()</script>')
             } else {
                 res.render('index', {data: data});
             }

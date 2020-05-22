@@ -6,8 +6,9 @@ const https = require('https');
 const iconv = require('iconv-lite');
 const querystring = require('querystring');
 
+const ua = require('./ua');
 const cache = require('./cache');
-const cookie = require('./cookie');
+const Cookie = require('./cookie');
 
 const hostname_charset = {};
 
@@ -24,7 +25,7 @@ module.exports.POST = function (url, headers, form) {
 };
 
 function request(method, url, headers, form) {
-    console.debug(`Browser ${method} ${url}`);
+    console.log(`Browser ${method} ${url}`);
     return function (cb) {
         headers = headers || {};
         form = form || {};
@@ -38,7 +39,7 @@ function request(method, url, headers, form) {
             'Cache-Control': 'max-age=0',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
+            'User-Agent': ua(),
         };
         if (method === 'POST') {
             options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -53,7 +54,7 @@ function request(method, url, headers, form) {
             cb(null, ret);
             return;
         }
-        cookie.append(options);
+        Cookie.append(options.headers);
         const agent = options.protocol === 'https:' ? https : http;
         const req = agent.request(options, (res) => {
             res.setTimeout(3000);
@@ -77,19 +78,19 @@ function request(method, url, headers, form) {
                     if (body.length > 500) {
                         cache.write(options, body);
                     }
-                    cookie.remember(options, res.headers);
+                    Cookie.remember(options, res.headers);
                     const ret = {code: res.statusCode, headers: res.headers, body: body};
                     cb(null, ret);
                 }).catch((err) => {
-                    console.error('Browser err', err);
+                    console.log('Browser err', err);
                     const ret = {code: 500, headers: {}, body: '<html></html>'};
                     cb(null, ret);
                 });
             })
         });
-        req.setTimeout(5000);
+        req.setTimeout(3000);
         req.on('error', (err) => {
-            console.error('Browser err', err);
+            console.log('Browser err', err);
             const ret = {code: 500, headers: {}, body: '<html></html>'};
             cb(null, ret);
         });
